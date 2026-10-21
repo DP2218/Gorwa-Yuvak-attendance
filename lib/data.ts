@@ -81,3 +81,16 @@ export async function getAttendanceForYear(year: number): Promise<{ session_date
       .range(from, to)
   );
 }
+
+export async function getAttendanceForRange(from: string, to: string): Promise<{ session_date: string; yuvak_id: number }[]> {
+  return fetchAll<{ session_date: string; yuvak_id: number }>((pageFrom, pageTo) =>
+    db()
+      .from('attendance')
+      .select('session_date, yuvak_id')
+      .gte('session_date', from)
+      .lte('session_date', to)
+      .order('id')
+      .range(pageFrom, pageTo)
+  );
+}
+

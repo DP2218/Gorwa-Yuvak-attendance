@@ -4,6 +4,7 @@ import { getAllYuvaks, getAttendanceForDate, getAttendanceForYear, getGroups, ge
 import { defaultSabhaDate, formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
 import { LogoutButton, SabhaDayForm } from '@/components/AdminControls';
 import AdminYuvaksTable, { type AdminYuvakItem } from '@/components/AdminYuvaksTable';
+import AdminDownloads from '@/components/AdminDownloads';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,13 +91,15 @@ export default async function AdminPage({
 
       <div className="card">
         <h2>Downloads (open in Excel)</h2>
-        <div className="row">
-          <a className="btn" href={`/api/admin/export?date=${date}`}>This date (.csv)</a>
-          <a className="btn ghost" href={`/api/admin/export?year=${year}`}>Whole year, one column per {dayName} (.csv)</a>
-        </div>
-        <p className="muted" style={{ marginBottom: 0 }}>
-          CSV opens directly in Excel. Use Data, then Text to Columns if names look squashed. The year file has P for present.
-        </p>
+        <AdminDownloads
+          defaultDate={date}
+          year={year}
+          sabhaDay={sabhaDay}
+          dateOptions={dateOptions}
+          groups={groups.map((g) => ({ id: g.id, code: g.code }))}
+          csvDateHref={`/api/admin/export?date=${date}`}
+          csvYearHref={`/api/admin/export?year=${year}`}
+        />
       </div>
 
       <div className="card">
