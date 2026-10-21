@@ -3,6 +3,7 @@ import { isAdmin } from '@/lib/auth';
 import { getAllYuvaks, getAttendanceForDate, getAttendanceForYear, getGroups, getSabhaDay } from '@/lib/data';
 import { defaultSabhaDate, formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
 import { LogoutButton, SabhaDayForm } from '@/components/AdminControls';
+import AdminYuvaksTable, { type AdminYuvakItem } from '@/components/AdminYuvaksTable';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,29 +123,21 @@ export default async function AdminPage({
 
       <div className="card">
         <h2>Yuvaks {groupFilter ? `in ${groupById.get(groupFilter)?.code ?? ''}` : '(all groups)'}</h2>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Group</th><th>#</th><th>Name</th><th>Mobile</th><th>Education</th><th>Status</th><th>Sabhas in {year}</th></tr>
-            </thead>
-            <tbody>
-              {rows.map((y) => {
-                const on = present.has(y.id);
-                return (
-                  <tr key={y.id}>
-                    <td>{groupById.get(y.group_id ?? -1)?.code ?? '-'}</td>
-                    <td>{y.serial_no ?? ''}</td>
-                    <td>{y.name}{y.source === 'added' && <span className="tag">added</span>}</td>
-                    <td>{y.mobile ?? ''}</td>
-                    <td>{y.education ?? ''}</td>
-                    <td><span className={`pill ${on ? 'on' : 'off'}`}>{on ? 'Present' : 'Absent'}</span></td>
-                    <td>{sabhasThisYear.get(y.id) ?? 0}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <AdminYuvaksTable
+          initialRows={rows.map((y) => ({
+            id: y.id,
+            group_id: y.group_id,
+            groupCode: groupById.get(y.group_id ?? -1)?.code ?? '-',
+            serial_no: y.serial_no,
+            name: y.name,
+            source: y.source,
+            mobile: y.mobile,
+            education: y.education,
+            isPresent: present.has(y.id),
+            sabhasCount: sabhasThisYear.get(y.id) ?? 0,
+          }))}
+          year={year}
+        />
       </div>
     </div>
   );

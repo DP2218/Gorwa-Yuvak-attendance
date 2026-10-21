@@ -79,3 +79,145 @@ th { font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; color: 
   .card { padding: 14px; }
   .row > .btn, .row > select { width: 100%; }
 }
+
+/* Actions column & Delete button */
+th.actions-col, td.actions-col {
+  position: sticky;
+  right: 0;
+  background: var(--card);
+  text-align: center;
+  box-shadow: -3px 0 6px -2px rgba(0, 0, 0, 0.06);
+  z-index: 2;
+}
+th.actions-col {
+  background: #faf8f5;
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: #fff;
+  border: 1px solid #f87171;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-delete:hover:not(:disabled) {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+.btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-delete:focus-visible {
+  outline: 3px solid #fcd34d;
+}
+
+@media (max-width: 640px) {
+  .btn-delete .btn-delete-text {
+    display: none;
+  }
+  .btn-delete {
+    padding: 6px 10px;
+  }
+}
+
+/* Modal Confirmation Dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease-out;
+}
+.modal-dialog {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.modal-dialog h3 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+.modal-dialog p {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+.btn-danger {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 18px;
+  cursor: pointer;
+  background: var(--danger);
+  color: #fff;
+  display: inline-block;
+  text-align: center;
+  transition: background 0.15s ease;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #991b1b;
+}
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-danger:focus-visible {
+  outline: 3px solid #fcd34d;
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--ink);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast.error {
+  background: var(--danger);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
