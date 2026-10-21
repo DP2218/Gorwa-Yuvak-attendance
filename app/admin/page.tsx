@@ -1,0 +1,151 @@
+import { redirect } from 'next/navigation';
+import { isAdmin } from '@/lib/auth';
+import { getAllYuvaks, getAttendanceForDate, getAttendanceForYear, getGroups, getSabhaDay } from '@/lib/data';
+import { defaultSabhaDate, formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
+import { LogoutButton, SabhaDayForm } from '@/components/AdminControls';
+
+export const dynamic = 'force-dynamic';
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string; group?: string }>;
+}) {
+  if (!(await isAdmin())) redirect('/admin/login');
+  const sp = await searchParams;
+
+  const [groups, yuvaks, sabhaDay] = await Promise.all([getGroups(), getAllYuvaks(), getSabhaDay()]);
+  const today = todayIST();
+  const date = sp.date && isValidIsoDate(sp.date) ? sp.date : defaultSabhaDate(Number(today.slice(0, 4)), sabhaDay, today);
+  const year = Number(date.slice(0, 4));
+  const dateOptions = sabhaDates(year, sabhaDay);
+  if (!dateOptions.includes(date)) dateOptions.push(date);
+  dateOptions.sort();
+
+  const [present, yearRecords] = await Promise.all([getAttendanceForDate(date), getAttendanceForYear(year)]);
+  const sabhasThisYear = new Map<number, number>();
+  for (const r of yearRecords) sabhasThisYear.set(r.yuvak_id, (sabhasThisYear.get(r.yuvak_id) ?? 0) + 1);
+  const heldDates = new Set(yearRecords.map((r) => r.session_date)).size;
+
+  const groupById = new Map(groups.map((g) => [g.id, g]));
+  const groupFilter = sp.group && sp.group !== 'all' ? Number(sp.group) : null;
+  const rows = yuvaks
+    .filter((y) => groupFilter === null || y.group_id === groupFilter)
+    .sort((a, b) => (groupById.get(a.group_id ?? -1)?.sort_order ?? 99) - (groupById.get(b.group_id ?? -1)?.sort_order ?? 99) || a.name.localeCompare(b.name));
+
+  const totalPresent = yuvaks.filter((y) => present.has(y.id)).length;
+  const pct = yuvaks.length ? Math.round((totalPresent / yuvaks.length) * 100) : 0;
+  const groupSummary = groups.map((g) => {
+    const members = yuvaks.filter((y) => y.group_id === g.id);
+    return { g, total: members.length, present: members.filter((y) => present.has(y.id)).length };
+  });
+
+  const dayName = sabhaDay[0].toUpperCase() + sabhaDay.slice(1);
+
+  return (
+    <div className="wrap">
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+        <h1>Attendance dashboard</h1>
+        <LogoutButton />
+      </div>
+
+      <div className="card">
+        <h2>Sabha settings</h2>
+        <SabhaDayForm current={sabhaDay} />
+        <p className="muted" style={{ marginBottom: 0 }}>
+          The sabha day is {dayName} by default. Change it here if the day moves. The attendance pages then list {dayName}s for the whole year.
+          You can always pick any other date on the group page for a special sabha.
+        </p>
+      </div>
+
+      <form method="get" className="card row" style={{ alignItems: 'flex-end' }}>
+        <div style={{ flex: '1 1 220px' }}>
+          <label htmlFor="date">Sabha date</label>
+          <select id="date" name="date" defaultValue={date}>
+            {dateOptions.map((d) => (
+              <option key={d} value={d}>{formatDate(d)}</option>
+            ))}
+          </select>
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <label htmlFor="group">Group</label>
+          <select id="group" name="group" defaultValue={groupFilter ?? 'all'}>
+            <option value="all">All groups</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>{g.code}</option>
+            ))}
+          </select>
+        </div>
+        <button className="btn ghost" type="submit">Show</button>
+      </form>
+
+      <div className="stats">
+        <div className="stat"><span className="muted">Date</span><b style={{ fontSize: '1.1rem' }}>{formatDate(date)}</b></div>
+        <div className="stat"><span className="muted">Present</span><b>{totalPresent}</b></div>
+        <div className="stat"><span className="muted">Yuvaks in list</span><b>{yuvaks.length}</b></div>
+        <div className="stat"><span className="muted">Attendance</span><b>{pct}%</b></div>
+        <div className="stat"><span className="muted">Sabha dates with attendance in {year}</span><b>{heldDates}</b></div>
+      </div>
+
+      <div className="card">
+        <h2>Downloads (open in Excel)</h2>
+        <div className="row">
+          <a className="btn" href={`/api/admin/export?date=${date}`}>This date (.csv)</a>
+          <a className="btn ghost" href={`/api/admin/export?year=${year}`}>Whole year, one column per {dayName} (.csv)</a>
+        </div>
+        <p className="muted" style={{ marginBottom: 0 }}>
+          CSV opens directly in Excel. Use Data, then Text to Columns if names look squashed. The year file has P for present.
+        </p>
+      </div>
+
+      <div className="card">
+        <h2>By group on {formatDate(date)}</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Group</th><th>Leader</th><th>Present</th><th>In list</th><th>%</th></tr>
+            </thead>
+            <tbody>
+              {groupSummary.map(({ g, total, present: p }) => (
+                <tr key={g.id}>
+                  <td><a href={`/admin?date=${date}&group=${g.id}`}>{g.code}</a></td>
+                  <td>{g.leader_name ?? '-'}</td>
+                  <td>{p}</td>
+                  <td>{total}</td>
+                  <td>{total ? Math.round((p / total) * 100) : 0}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Yuvaks {groupFilter ? `in ${groupById.get(groupFilter)?.code ?? ''}` : '(all groups)'}</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Group</th><th>#</th><th>Name</th><th>Mobile</th><th>Education</th><th>Status</th><th>Sabhas in {year}</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((y) => {
+                const on = present.has(y.id);
+                return (
+                  <tr key={y.id}>
+                    <td>{groupById.get(y.group_id ?? -1)?.code ?? '-'}</td>
+                    <td>{y.serial_no ?? ''}</td>
+                    <td>{y.name}{y.source === 'added' && <span className="tag">added</span>}</td>
+                    <td>{y.mobile ?? ''}</td>
+                    <td>{y.education ?? ''}</td>
+                    <td><span className={`pill ${on ? 'on' : 'off'}`}>{on ? 'Present' : 'Absent'}</span></td>
+                    <td>{sabhasThisYear.get(y.id) ?? 0}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
