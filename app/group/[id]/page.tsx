@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import MarkClient from '@/components/MarkClient';
-import { getAllYuvaks, getAttendanceForDate, getGroups, getSabhaDay } from '@/lib/data';
-import { currentYearIST, defaultSabhaDate, formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
+import { getActiveSabhaDate, getAllYuvaks, getAttendanceForDate, getGroups, getSabhaDay } from '@/lib/data';
+import { formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,15 +16,21 @@ export default async function GroupPage({
   const { id } = await params;
   const sp = await searchParams;
   const groupId = Number(id);
-  const [groups, sabhaDay, allYuvaks] = await Promise.all([getGroups(), getSabhaDay(), getAllYuvaks()]);
+  const [groups, sabhaDay, allYuvaks, activeDate] = await Promise.all([
+    getGroups(),
+    getSabhaDay(),
+    getAllYuvaks(),
+    getActiveSabhaDate(),
+  ]);
   const group = groups.find((g) => g.id === groupId);
   if (!group) notFound();
 
   const today = todayIST();
-  const date = sp.date && isValidIsoDate(sp.date) ? sp.date : defaultSabhaDate(currentYearIST(), sabhaDay, today);
+  const date = sp.date && isValidIsoDate(sp.date) ? sp.date : activeDate;
   const year = Number(date.slice(0, 4));
   const options = sabhaDates(year, sabhaDay);
   if (!options.includes(date)) options.push(date); // a special one-off date
+  if (!options.includes(activeDate)) options.push(activeDate);
   options.sort();
 
   const [present, yuvaks] = await Promise.all([
@@ -48,7 +54,7 @@ export default async function GroupPage({
             <select id="date" name="date" defaultValue={date}>
               {options.map((d) => (
                 <option key={d} value={d}>
-                  {formatDate(d)}{d === defaultSabhaDate(year, sabhaDay, today) ? ' (default)' : ''}
+                  {formatDate(d)}{d === activeDate ? ' (default)' : ''}
                 </option>
               ))}
             </select>

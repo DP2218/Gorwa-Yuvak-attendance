@@ -1,7 +1,14 @@
 import { redirect } from 'next/navigation';
 import { isAdmin } from '@/lib/auth';
-import { getAllYuvaks, getAttendanceForDate, getAttendanceForYear, getGroups, getSabhaDay } from '@/lib/data';
-import { defaultSabhaDate, formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
+import {
+  getActiveSabhaDate,
+  getAllYuvaks,
+  getAttendanceForDate,
+  getAttendanceForYear,
+  getGroups,
+  getSabhaSettings,
+} from '@/lib/data';
+import { formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
 import { LogoutButton, SabhaDayForm } from '@/components/AdminControls';
 import AdminYuvaksTable, { type AdminYuvakItem } from '@/components/AdminYuvaksTable';
 import AdminDownloads from '@/components/AdminDownloads';
@@ -16,12 +23,19 @@ export default async function AdminPage({
   if (!(await isAdmin())) redirect('/admin/login');
   const sp = await searchParams;
 
-  const [groups, yuvaks, sabhaDay] = await Promise.all([getGroups(), getAllYuvaks(), getSabhaDay()]);
+  const [groups, yuvaks, sabhaSettings, activeDate] = await Promise.all([
+    getGroups(),
+    getAllYuvaks(),
+    getSabhaSettings(),
+    getActiveSabhaDate(),
+  ]);
+  const sabhaDay = sabhaSettings.sabha_day;
   const today = todayIST();
-  const date = sp.date && isValidIsoDate(sp.date) ? sp.date : defaultSabhaDate(Number(today.slice(0, 4)), sabhaDay, today);
+  const date = sp.date && isValidIsoDate(sp.date) ? sp.date : activeDate;
   const year = Number(date.slice(0, 4));
   const dateOptions = sabhaDates(year, sabhaDay);
   if (!dateOptions.includes(date)) dateOptions.push(date);
+  if (!dateOptions.includes(activeDate)) dateOptions.push(activeDate);
   dateOptions.sort();
 
   const [present, yearRecords] = await Promise.all([getAttendanceForDate(date), getAttendanceForYear(year)]);
@@ -42,8 +56,6 @@ export default async function AdminPage({
     return { g, total: members.length, present: members.filter((y) => present.has(y.id)).length };
   });
 
-  const dayName = sabhaDay[0].toUpperCase() + sabhaDay.slice(1);
-
   return (
     <div className="wrap">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
@@ -53,10 +65,14 @@ export default async function AdminPage({
 
       <div className="card">
         <h2>Sabha settings</h2>
-        <SabhaDayForm current={sabhaDay} />
-        <p className="muted" style={{ marginBottom: 0 }}>
-          The sabha day is {dayName} by default. Change it here if the day moves. The attendance pages then list {dayName}s for the whole year.
-          You can always pick any other date on the group page for a special sabha.
+        <SabhaDayForm
+          currentDay={sabhaSettings.sabha_day}
+          currentMode={sabhaSettings.date_mode}
+          currentManualDate={sabhaSettings.manual_date}
+          today={today}
+        />
+        <p className="muted" style={{ marginBottom: 0, marginTop: 14 }}>
+          The sabha day is Friday by default. Choose the date attendance is marked for, or leave it on Auto. You can always pick any other date on a group page for a special sabha.
         </p>
       </div>
 

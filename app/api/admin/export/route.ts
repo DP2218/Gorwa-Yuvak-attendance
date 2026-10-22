@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { getAllYuvaks, getAttendanceForYear, getAttendanceForDate, getGroups, getSabhaDay } from '@/lib/data';
+import {
+  getActiveSabhaDate,
+  getAllYuvaks,
+  getAttendanceForYear,
+  getAttendanceForDate,
+  getGroups,
+  getSabhaDay,
+} from '@/lib/data';
 import { isValidIsoDate, sabhaDates, shortDate } from '@/lib/dates';
 import { toCsv } from '@/lib/csv';
 
@@ -13,16 +20,18 @@ export async function GET(req: Request) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
   const url = new URL(req.url);
-  const date = url.searchParams.get('date');
-  const year = Number(url.searchParams.get('year'));
+  const rawDate = url.searchParams.get('date');
+  const rawYear = url.searchParams.get('year');
+  const year = rawYear ? Number(rawYear) : null;
+  const date = rawDate ?? (!year ? await getActiveSabhaDate() : null);
   const [yuvaks, groups, sabhaDay] = await Promise.all([getAllYuvaks(), getGroups(), getSabhaDay()]);
   const groupCode = new Map(groups.map((g) => [g.id, g.code]));
 
   const base = (y: { serial_no: number | null; name: string; mobile: string | null; education: string | null; group_id: number | null; source: string }) =>
     [groupCode.get(y.group_id ?? -1) ?? '', y.serial_no ?? '', y.name, y.mobile ?? '', y.education ?? '', y.source === 'added' ? 'Added' : 'Excel'];
 
-  let rows: (string | number | null)[][];
-  let filename: string;
+  let rows: (string | number | null)[][] = [];
+  let filename = 'attendance.csv';
 
   if (date && isValidIsoDate(date)) {
     const present = await getAttendanceForDate(date);
@@ -30,8 +39,7 @@ export async function GET(req: Request) {
     for (const y of yuvaks) rows.push([...base(y), present.has(y.id) ? 'Present' : 'Absent']);
     const total = yuvaks.filter((y) => present.has(y.id)).length;
     rows.push(['', '', `Total present: ${total} of ${yuvaks.length}`, '', '', '', '']);
-    filename = `attendance-${date}.csv`;
-  } else if (Number.isInteger(year) && year > 2000) {
+  } else if (year !== null && Number.isInteger(year) && year > 2000) {
     const dates = sabhaDates(year, sabhaDay);
     const records = await getAttendanceForYear(year);
     const byYuvakDate = new Set(records.map((r) => `${r.yuvak_id}|${r.session_date}`));

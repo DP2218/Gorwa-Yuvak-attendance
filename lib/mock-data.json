@@ -1136,6 +1136,8 @@
   ],
   "attendance": [],
   "settings": {
-    "sabha_day": "friday"
+    "sabha_day": "friday",
+    "date_mode": "auto",
+    "manual_date": null
   }
 }

@@ -1,5 +1,20 @@
 import { db } from './supabase';
-import { DEFAULT_SABHA_DAY, isWeekday, type Weekday } from './dates';
+import {
+  DEFAULT_SABHA_DAY,
+  isWeekday,
+  isValidIsoDate,
+  mostRecentSabhaDate,
+  todayIST,
+  type Weekday,
+} from './dates';
+
+export type DateMode = 'auto' | 'manual';
+
+export type SabhaSettings = {
+  sabha_day: Weekday;
+  date_mode: DateMode;
+  manual_date: string | null;
+};
 
 export type Group = {
   id: number;
@@ -39,14 +54,49 @@ async function fetchAll<T>(
   return out;
 }
 
+export async function getSabhaSettings(): Promise<SabhaSettings> {
+  const { data } = await db()
+    .from('settings')
+    .select('key, value')
+    .in('key', ['sabha_day', 'date_mode', 'manual_date']);
+  const map = new Map((data ?? []).map((r) => [r.key, r.value]));
+  const sabha_day = isWeekday(map.get('sabha_day')) ? (map.get('sabha_day') as Weekday) : DEFAULT_SABHA_DAY;
+  const rawMode = map.get('date_mode');
+  const date_mode: DateMode = rawMode === 'manual' ? 'manual' : 'auto';
+  const rawManual = map.get('manual_date');
+  const manual_date = rawManual && isValidIsoDate(rawManual) ? rawManual : null;
+  return { sabha_day, date_mode, manual_date };
+}
+
+export async function setSabhaSettings(settings: {
+  sabha_day: Weekday;
+  date_mode: DateMode;
+  manual_date?: string | null;
+}): Promise<void> {
+  const rows = [
+    { key: 'sabha_day', value: settings.sabha_day },
+    { key: 'date_mode', value: settings.date_mode },
+    { key: 'manual_date', value: settings.manual_date ?? '' },
+  ];
+  const { error } = await db().from('settings').upsert(rows);
+  if (error) throw new Error(error.message);
+}
+
 export async function getSabhaDay(): Promise<Weekday> {
-  const { data } = await db().from('settings').select('value').eq('key', 'sabha_day').maybeSingle();
-  return isWeekday(data?.value) ? data.value : DEFAULT_SABHA_DAY;
+  const settings = await getSabhaSettings();
+  return settings.sabha_day;
 }
 
 export async function setSabhaDay(day: Weekday): Promise<void> {
-  const { error } = await db().from('settings').upsert({ key: 'sabha_day', value: day });
-  if (error) throw new Error(error.message);
+  await setSabhaSettings({ sabha_day: day, date_mode: 'auto', manual_date: null });
+}
+
+export async function getActiveSabhaDate(): Promise<string> {
+  const settings = await getSabhaSettings();
+  if (settings.date_mode === 'manual' && settings.manual_date) {
+    return settings.manual_date;
+  }
+  return mostRecentSabhaDate(settings.sabha_day, todayIST());
 }
 
 export async function getGroups(): Promise<Group[]> {

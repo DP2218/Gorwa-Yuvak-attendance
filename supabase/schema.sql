@@ -43,6 +43,10 @@ create table if not exists settings (
 );
 insert into settings (key, value) values ('sabha_day', 'friday')
 on conflict (key) do nothing;
+insert into settings (key, value) values ('date_mode', 'auto')
+on conflict (key) do nothing;
+insert into settings (key, value) values ('manual_date', '')
+on conflict (key) do nothing;
 
 -- The app talks to Supabase with the SERVICE ROLE key on the server only.
 -- Enabling RLS with no public policies means the anon key cannot read or write anything.

@@ -1,13 +1,17 @@
 import HomeClient from '@/components/HomeClient';
-import { getAllYuvaks, getGroups, getSabhaDay } from '@/lib/data';
-import { currentYearIST, defaultSabhaDate, formatDate, todayIST, WEEKDAYS } from '@/lib/dates';
+import { getActiveSabhaDate, getAllYuvaks, getGroups, getSabhaDay } from '@/lib/data';
+import { formatDate, WEEKDAYS } from '@/lib/dates';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [groups, yuvaks, sabhaDay] = await Promise.all([getGroups(), getAllYuvaks(), getSabhaDay()]);
-  const today = todayIST();
-  const date = defaultSabhaDate(currentYearIST(), sabhaDay, today);
+  const [groups, yuvaks, sabhaDay, activeDate] = await Promise.all([
+    getGroups(),
+    getAllYuvaks(),
+    getSabhaDay(),
+    getActiveSabhaDate(),
+  ]);
+  const date = activeDate;
   const counts = new Map<number, number>();
   for (const y of yuvaks) if (y.group_id) counts.set(y.group_id, (counts.get(y.group_id) ?? 0) + 1);
 

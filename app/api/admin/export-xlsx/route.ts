@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import {
+  getActiveSabhaDate,
   getAllYuvaks,
   getAttendanceForRange,
   getAttendanceForYear,
@@ -59,8 +60,8 @@ export async function GET(req: Request) {
   const [groups, yuvaks, sabhaDay] = await Promise.all([getGroups(), getAllYuvaks(), getSabhaDay()]);
 
   if (mode === 'single') {
-    const d = isoDateFromStr(url.searchParams.get('date'));
-    if (!d) return jsonError('mode=single requires ?date=YYYY-MM-DD');
+    let d = isoDateFromStr(url.searchParams.get('date'));
+    if (!d) d = await getActiveSabhaDate();
     dates = [d];
     filenamePart = d;
   } else if (mode === 'range') {

@@ -51,6 +51,16 @@ export function defaultSabhaDate(year: number, day: Weekday, today: string): str
   return past.length ? past[past.length - 1] : list[0];
 }
 
+// The most recent sabha day on or before `today` (defaults to today in Asia/Kolkata IST)
+export function mostRecentSabhaDate(day: Weekday, today: string = todayIST()): string {
+  const target = WEEKDAYS.indexOf(day);
+  const d = new Date(`${today}T00:00:00Z`);
+  const current = d.getUTCDay();
+  const diff = (current - target + 7) % 7;
+  d.setUTCDate(d.getUTCDate() - diff);
+  return d.toISOString().slice(0, 10);
+}
+
 export function formatDate(iso: string): string {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
