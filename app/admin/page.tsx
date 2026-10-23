@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { isAdmin } from '@/lib/auth';
 import {
@@ -10,7 +11,6 @@ import {
 } from '@/lib/data';
 import { formatDate, isValidIsoDate, sabhaDates, todayIST } from '@/lib/dates';
 import { LogoutButton, SabhaDayForm } from '@/components/AdminControls';
-import AdminYuvaksTable, { type AdminYuvakItem } from '@/components/AdminYuvaksTable';
 import AdminDownloads from '@/components/AdminDownloads';
 
 export const dynamic = 'force-dynamic';
@@ -39,15 +39,7 @@ export default async function AdminPage({
   dateOptions.sort();
 
   const [present, yearRecords] = await Promise.all([getAttendanceForDate(date), getAttendanceForYear(year)]);
-  const sabhasThisYear = new Map<number, number>();
-  for (const r of yearRecords) sabhasThisYear.set(r.yuvak_id, (sabhasThisYear.get(r.yuvak_id) ?? 0) + 1);
   const heldDates = new Set(yearRecords.map((r) => r.session_date)).size;
-
-  const groupById = new Map(groups.map((g) => [g.id, g]));
-  const groupFilter = sp.group && sp.group !== 'all' ? Number(sp.group) : null;
-  const rows = yuvaks
-    .filter((y) => groupFilter === null || y.group_id === groupFilter)
-    .sort((a, b) => (groupById.get(a.group_id ?? -1)?.sort_order ?? 99) - (groupById.get(b.group_id ?? -1)?.sort_order ?? 99) || a.name.localeCompare(b.name));
 
   const totalPresent = yuvaks.filter((y) => present.has(y.id)).length;
   const pct = yuvaks.length ? Math.round((totalPresent / yuvaks.length) * 100) : 0;
@@ -85,15 +77,6 @@ export default async function AdminPage({
             ))}
           </select>
         </div>
-        <div style={{ flex: '1 1 200px' }}>
-          <label htmlFor="group">Group</label>
-          <select id="group" name="group" defaultValue={groupFilter ?? 'all'}>
-            <option value="all">All groups</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>{g.code}</option>
-            ))}
-          </select>
-        </div>
         <button className="btn ghost" type="submit">Show</button>
       </form>
 
@@ -128,7 +111,7 @@ export default async function AdminPage({
             <tbody>
               {groupSummary.map(({ g, total, present: p }) => (
                 <tr key={g.id}>
-                  <td><a href={`/admin?date=${date}&group=${g.id}`}>{g.code}</a></td>
+                  <td><Link href={`/admin/group/${g.id}?date=${date}`}>{g.code}</Link></td>
                   <td>{g.leader_name ?? '-'}</td>
                   <td>{p}</td>
                   <td>{total}</td>
@@ -138,25 +121,6 @@ export default async function AdminPage({
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="card">
-        <h2>Yuvaks {groupFilter ? `in ${groupById.get(groupFilter)?.code ?? ''}` : '(all groups)'}</h2>
-        <AdminYuvaksTable
-          initialRows={rows.map((y) => ({
-            id: y.id,
-            group_id: y.group_id,
-            groupCode: groupById.get(y.group_id ?? -1)?.code ?? '-',
-            serial_no: y.serial_no,
-            name: y.name,
-            source: y.source,
-            mobile: y.mobile,
-            education: y.education,
-            isPresent: present.has(y.id),
-            sabhasCount: sabhasThisYear.get(y.id) ?? 0,
-          }))}
-          year={year}
-        />
       </div>
     </div>
   );

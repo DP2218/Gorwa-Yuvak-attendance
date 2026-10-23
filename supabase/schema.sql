@@ -5,7 +5,8 @@ create table if not exists groups (
   code         text not null unique,          -- 'SK 1', 'UK 1', 'NEW'
   leader_name  text,
   sort_order   int  not null default 0,
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
 );
 
 create table if not exists yuvaks (
@@ -22,7 +23,8 @@ create table if not exists yuvaks (
   education    text,
   remarks      text,
   source       text not null default 'excel' check (source in ('excel', 'added')),
-  created_at   timestamptz not null default now()
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
 );
 create index if not exists yuvaks_group_idx on yuvaks(group_id);
 

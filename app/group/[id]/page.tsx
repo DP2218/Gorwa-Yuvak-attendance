@@ -41,7 +41,7 @@ export default async function GroupPage({
 
   return (
     <div className="wrap">
-      <p style={{ margin: '0 0 8px' }}><Link href="/">← All groups</Link></p>
+      <div style={{ margin: '0 0 4px' }}><Link href="/" className="back-link">← All groups</Link></div>
       <h1>{group.code}</h1>
       <p className="muted" style={{ marginTop: 0 }}>
         {group.leader_name ? `Leader: ${group.leader_name}` : 'No leader listed'}

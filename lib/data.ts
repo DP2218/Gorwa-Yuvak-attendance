@@ -21,6 +21,8 @@ export type Group = {
   code: string;
   leader_name: string | null;
   sort_order: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Yuvak = {
@@ -37,6 +39,8 @@ export type Yuvak = {
   education: string | null;
   remarks: string | null;
   source: 'excel' | 'added';
+  created_at?: string;
+  updated_at?: string;
 };
 
 // Supabase returns at most 1000 rows per request, so page through.
@@ -103,6 +107,12 @@ export async function getGroups(): Promise<Group[]> {
   const { data, error } = await db().from('groups').select('*').order('sort_order');
   if (error) throw new Error(error.message);
   return (data ?? []) as Group[];
+}
+
+export async function getGroupById(id: number): Promise<Group | null> {
+  const { data, error } = await db().from('groups').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as Group | null;
 }
 
 export async function getAllYuvaks(): Promise<Yuvak[]> {
